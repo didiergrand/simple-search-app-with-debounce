@@ -1,34 +1,39 @@
 import "./App.css";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import useDebounce from "./useDebounce";
 
 const SearchAPI = (name) =>
   fetch(`https://api.api-ninjas.com/v1/dogs?name=${name}`, {
     headers: { "X-Api-Key": process.env.REACT_APP_API_KEY },
-  }) // Replace the `xxxxx` with your API key
+  })
     .then((res) => res.json())
     .then((data) => data);
 
 function App() {
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResult, setSearchResult] = useState([]);
+  const debouncedSearchQuery = useDebounce(searchQuery, 1000);
+
+  useEffect(() => {
+    if (debouncedSearchQuery) {
+      SearchAPI(debouncedSearchQuery)
+        .then((data) => {
+          if (data?.length === 0) {
+            setSearchResult([]);
+          } else {
+            setSearchResult(data);
+          }
+        })
+        .catch((e) => {
+          console.log("error:", e);
+        });
+    } else {
+      setSearchResult([]);
+    }
+  }, [debouncedSearchQuery]);
 
   const onSearchQueryChange = (event) => {
-    event.preventDefault();
     setSearchQuery(event.target.value);
-    // Fetch search data based on query`
-    SearchAPI(searchQuery)
-      .then((data) => {
-        // Set data to result`
-        if (event.target.value === "" || data?.length === 0) {
-          return setSearchResult([]);
-        }
-        setSearchResult(data);
-
-        console.log(data, searchResult);
-      })
-      .catch((e) => {
-        console.log("error:", event);
-      });
   };
 
   return (
@@ -42,16 +47,16 @@ function App() {
       />
       {searchResult.length > 0 ? (
         searchResult.map((dog) => (
-          <div>
-            <img src={dog.image_link} alt="dog" />
+          <div key={dog.id}>
+            <img src={dog.image_link} alt="dog" width={100} />
             <div>
-              <h5>{dog.name} </h5>
+              <h5>{dog.name}</h5>
             </div>
           </div>
         ))
       ) : (
         <div>
-          <h5> No results found </h5>
+          <h5>No results found</h5>
         </div>
       )}
     </div>
